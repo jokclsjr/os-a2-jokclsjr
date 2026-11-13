@@ -16,7 +16,6 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
-
 static int mlfq_slices[4] = {1, 2, 4, 8};
 
 static int mlfq_cursor[4] = {-1, -1, -1, -1};
@@ -24,7 +23,6 @@ struct spinlock mlfq_cursor_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
-
 
 extern char trampoline[]; // trampoline.S
 
@@ -453,8 +451,8 @@ mlfq_tick(struct proc *p)
 
   level = p->level;
 
-  if(p->levelticks >= mlfq_slices[p->level]){
-    if(p->level < 3)
+  if (p->levelticks >= mlfq_slices[p->level]) {
+    if (p->level < 3)
       p->level++;
 
     p->levelticks = 0;
@@ -463,17 +461,17 @@ mlfq_tick(struct proc *p)
 
   release(&p->lock);
 
-  if(should_yield)
+  if (should_yield)
     return 1;
 
   // Preempt if a higher-priority process is runnable.
-  for(struct proc *q = proc; q < &proc[NPROC]; q++){
-    if(q == p)
+  for (struct proc *q = proc; q < &proc[NPROC]; q++) {
+    if (q == p)
       continue;
 
     acquire(&q->lock);
 
-    if(q->state == RUNNABLE && q->level < level){
+    if (q->state == RUNNABLE && q->level < level) {
       release(&q->lock);
       return 1;
     }
@@ -489,10 +487,10 @@ mlfq_boost(void)
 {
   struct proc *p;
 
-  for(p = proc; p < &proc[NPROC]; p++){
+  for (p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
 
-    if(p->state != UNUSED){
+    if (p->state != UNUSED) {
       p->level = 0;
       p->levelticks = 0;
     }
@@ -501,7 +499,6 @@ mlfq_boost(void)
   }
 }
 
-
 void
 scheduler(void)
 {
@@ -509,25 +506,25 @@ scheduler(void)
 
   c->proc = 0;
 
-  for(;;){
+  for (;;) {
     intr_on();
 
     int ran = 0;
 
-    for(int level = 0; level < 4 && !ran; level++){
+    for (int level = 0; level < 4 && !ran; level++) {
       int start;
 
       acquire(&mlfq_cursor_lock);
       start = mlfq_cursor[level];
       release(&mlfq_cursor_lock);
 
-      for(int offset = 1; offset <= NPROC; offset++){
+      for (int offset = 1; offset <= NPROC; offset++) {
         int index = (start + offset) % NPROC;
         struct proc *p = &proc[index];
 
         acquire(&p->lock);
 
-        if(p->state == RUNNABLE && p->level == level){
+        if (p->state == RUNNABLE && p->level == level) {
           p->state = RUNNING;
           c->proc = p;
 
@@ -551,13 +548,12 @@ scheduler(void)
       }
     }
 
-    if(!ran){
+    if (!ran) {
       intr_on();
       asm volatile("wfi");
     }
   }
 }
-
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
@@ -766,15 +762,15 @@ kgetpinfo(uint64 addr, int max)
   struct proc *cur = myproc();
   int count = 0;
 
-  if(max < 0)
+  if (max < 0)
     return -1;
 
-  for(p = proc; p < &proc[NPROC] && count < max; p++){
+  for (p = proc; p < &proc[NPROC] && count < max; p++) {
     struct pinfo info;
 
     acquire(&p->lock);
 
-    if(p->state == UNUSED){
+    if (p->state == UNUSED) {
       release(&p->lock);
       continue;
     }
@@ -789,9 +785,8 @@ kgetpinfo(uint64 addr, int max)
 
     release(&p->lock);
 
-    if(copyout(cur->pagetable, cur->sz,
-               addr + count * sizeof(struct pinfo),
-               (char *)&info, sizeof(info)) < 0)
+    if (copyout(cur->pagetable, cur->sz, addr + count * sizeof(struct pinfo),
+                (char *)&info, sizeof(info)) < 0)
       return -1;
 
     count++;
